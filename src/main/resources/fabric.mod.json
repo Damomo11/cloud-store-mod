@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "cloudstore",
+  "version": "${version}",
+  "name": "Cloud Store",
+  "description": "View and operate a cloud-store inventory inside Minecraft.",
+  "authors": ["cloud-store contributors"],
+  "contact": {},
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "com.cloudstore.client.CloudStoreClient"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.0",
+    "minecraft": "~1.21.11",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}

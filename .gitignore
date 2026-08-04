@@ -1,0 +1,19 @@
+.gradle/
+build/
+run/
+
+.idea/
+*.iml
+*.ipr
+*.iws
+
+eclipse/
+out/
+
+*.log
+hs_err_pid*
+
+# Local Minecraft/mod configuration
+/config/
+/mods/
+/logs/
