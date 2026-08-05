@@ -1,13 +1,13 @@
 # Cloud Store Fabric Mod
 
-适用于 Minecraft Java Edition 1.21.11 的 Fabric 客户端模组。它直接使用本仓库
+适用于 Minecraft Java Edition 26.1.x 的 Fabric 客户端模组。它直接使用云仓库
 `src/webServer.js` 已有的 Web API，在游戏内查看库存，并发起存入、取出操作。
 组织管理、流水、别名、订阅等复杂功能仍在网页端完成。
 
 ## 使用
 
-1. 安装 Minecraft 1.21.11、Fabric Loader 0.19.0+ 和对应版本的 Fabric API。
-2. 把 `build/libs/cloud-store-0.2.2.jar` 放进客户端的 `mods` 目录，并删除旧版本的 Cloud Store JAR。
+1. 安装 Minecraft 26.1.x、Fabric Loader 0.19.0+ 和对应版本的 Fabric API。
+2. 把 `build/libs/cloud-store-0.3.0.jar` 放进客户端的 `mods` 目录，并删除旧版本的 Cloud Store JAR。
 3. 进入游戏后按 `O` 打开云仓库，点击右下角“设置”。
 4. 填写云仓库 Web 服务地址，例如 `http://192.168.1.10:8787`。
 5. 填写在游戏内通过 `/msg <机器人> 设置密码 <密码>` 设置的 Web 登录密码。
@@ -30,13 +30,13 @@
 
 ## 构建
 
-需要 Java 21：
+需要 Java 25：
 
 ```powershell
 .\gradlew.bat build
 ```
 
-可安装的 remap JAR 输出到 `build/libs/cloud-store-0.2.2.jar`。
+可安装 JAR 输出到 `build/libs/cloud-store-0.3.0.jar`。
 
 ## 使用的接口
 
