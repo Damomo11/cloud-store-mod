@@ -5,14 +5,15 @@ import com.cloudstore.client.cache.InventoryCache;
 import com.cloudstore.client.config.CloudStoreConfig;
 import com.cloudstore.client.screen.CloudStoreScreen;
 import com.cloudstore.client.screen.ConfigScreen;
+import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.option.KeyBinding;
-import net.minecraft.client.util.InputUtil;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
+import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
+import net.minecraft.client.KeyMapping;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,7 +23,7 @@ public final class CloudStoreClient implements ClientModInitializer {
     public static CloudStoreConfig config;
     public static CloudStoreApi api;
     public static InventoryCache cache;
-    private static KeyBinding openKey;
+    private static KeyMapping openKey;
 
     @Override
     public void onInitializeClient() {
@@ -30,28 +31,28 @@ public final class CloudStoreClient implements ClientModInitializer {
         api = new CloudStoreApi(config);
         cache = InventoryCache.load();
         LOGGER.info("Cloud Store client initialized, endpoint={}", config.apiBaseUrl);
-        openKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+        openKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
             "key.cloudstore.open",
-            InputUtil.Type.KEYSYM,
+            InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_O,
-            KeyBinding.Category.create(Identifier.of("cloudstore", "main"))
+            KeyMapping.Category.register(Identifier.fromNamespaceAndPath("cloudstore", "main"))
         ));
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            while (openKey.wasPressed()) {
+            while (openKey.consumeClick()) {
                 open(client);
             }
         });
     }
 
-    public static void open(MinecraftClient client) {
-        if (client.currentScreen instanceof CloudStoreScreen) {
+    public static void open(Minecraft client) {
+        if (client.gui.screen() instanceof CloudStoreScreen) {
             return;
         }
-        client.setScreen(new CloudStoreScreen(client.currentScreen));
+        client.gui.setScreen(new CloudStoreScreen(client.gui.screen()));
     }
 
-    public static void openConfig(MinecraftClient client, net.minecraft.client.gui.screen.Screen parent) {
-        client.setScreen(new ConfigScreen(parent));
+    public static void openConfig(Minecraft client, Screen parent) {
+        client.gui.setScreen(new ConfigScreen(parent));
     }
 
     public static void resetApi() {
@@ -59,13 +60,13 @@ public final class CloudStoreClient implements ClientModInitializer {
     }
 
     public static void showStatus(String message) {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client.player != null) {
-            client.player.sendMessage(Text.literal("[云仓库] " + message), true);
+            client.player.sendOverlayMessage(Component.literal("[云仓库] " + message));
         }
     }
 
     public static Identifier id(String path) {
-        return Identifier.of("cloudstore", path);
+        return Identifier.fromNamespaceAndPath("cloudstore", path);
     }
 }

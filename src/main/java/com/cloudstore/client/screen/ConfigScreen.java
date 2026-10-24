@@ -2,18 +2,20 @@ package com.cloudstore.client.screen;
 
 import com.cloudstore.client.CloudStoreClient;
 import com.cloudstore.client.config.CloudStoreConfig;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
+import net.minecraft.util.FormattedCharSequence;
 
 public final class ConfigScreen extends Screen {
     private final Screen parent;
-    private TextFieldWidget urlField;
-    private TextFieldWidget tokenField;
-    private ButtonWidget testButton;
+    private EditBox urlField;
+    private EditBox tokenField;
+    private Button testButton;
     private String status = "";
     private int statusColor = 0xB9C3D0;
     private int titleY;
@@ -22,7 +24,7 @@ public final class ConfigScreen extends Screen {
     private int statusY;
 
     public ConfigScreen(Screen parent) {
-        super(Text.literal("云仓库设置"));
+        super(Component.literal("云仓库设置"));
         this.parent = parent;
     }
 
@@ -39,27 +41,28 @@ public final class ConfigScreen extends Screen {
         int buttonY = titleY + 112;
         statusY = Math.min(this.height - 18, titleY + 140);
 
-        urlField = new TextFieldWidget(this.textRenderer, formX, urlFieldY, formWidth, 20, Text.literal("服务地址"));
-        urlField.setPlaceholder(Text.literal("例如：http://服务器IP:端口"));
-        urlField.setText(CloudStoreClient.config.apiBaseUrl);
+        urlField = new EditBox(this.font, formX, urlFieldY, formWidth, 20, Component.literal("服务地址"));
+        urlField.setHint(Component.literal("例如：http://服务器IP:端口"));
+        urlField.setValue(CloudStoreClient.config.apiBaseUrl);
         urlField.setMaxLength(256);
-        this.addDrawableChild(urlField);
-        tokenField = new TextFieldWidget(this.textRenderer, formX, tokenFieldY, formWidth, 20, Text.literal("登录密码"));
-        tokenField.setPlaceholder(Text.literal("填写游戏内设置的 Web 登录密码"));
-        tokenField.setText(CloudStoreClient.config.loginToken);
+        this.addRenderableWidget(urlField);
+        tokenField = new EditBox(this.font, formX, tokenFieldY, formWidth, 20, Component.literal("登录密码"));
+        tokenField.setHint(Component.literal("填写游戏内设置的 Web 登录密码"));
+        tokenField.setValue(CloudStoreClient.config.loginToken);
         tokenField.setMaxLength(256);
-        tokenField.addFormatter((text, firstCharacterIndex) -> Text.literal("*".repeat(text.length())).asOrderedText());
-        this.addDrawableChild(tokenField);
+        tokenField.addFormatter((text, firstCharacterIndex) ->
+            FormattedCharSequence.forward("*".repeat(text.length()), Style.EMPTY));
+        this.addRenderableWidget(tokenField);
 
         int gap = 6;
         int buttonWidth = (formWidth - gap * 2) / 3;
-        this.addDrawableChild(ButtonWidget.builder(Text.literal("保存"), button -> save())
-            .dimensions(formX, buttonY, buttonWidth, 20).build());
-        testButton = ButtonWidget.builder(Text.literal("保存并测试"), button -> testConnection())
-            .dimensions(formX + buttonWidth + gap, buttonY, buttonWidth, 20).build();
-        this.addDrawableChild(testButton);
-        this.addDrawableChild(ButtonWidget.builder(Text.literal("取消"), button -> close())
-            .dimensions(formX + (buttonWidth + gap) * 2, buttonY, buttonWidth, 20).build());
+        this.addRenderableWidget(Button.builder(Component.literal("保存"), button -> save())
+            .bounds(formX, buttonY, buttonWidth, 20).build());
+        testButton = Button.builder(Component.literal("保存并测试"), button -> testConnection())
+            .bounds(formX + buttonWidth + gap, buttonY, buttonWidth, 20).build();
+        this.addRenderableWidget(testButton);
+        this.addRenderableWidget(Button.builder(Component.literal("取消"), button -> onClose())
+            .bounds(formX + (buttonWidth + gap) * 2, buttonY, buttonWidth, 20).build());
         this.setInitialFocus(urlField);
     }
 
@@ -67,15 +70,15 @@ public final class ConfigScreen extends Screen {
         saveValues();
         status = "已保存";
         statusColor = 0x71D49A;
-        if (this.client != null) {
-            this.client.setScreen(parent);
+        if (this.minecraft != null) {
+            this.minecraft.gui.setScreen(parent);
         }
     }
 
     private void testConnection() {
         status = "正在测试连接...";
         statusColor = 0xB9C3D0;
-        testButton.setMessage(Text.literal("测试中..."));
+        testButton.setMessage(Component.literal("测试中..."));
         testButton.active = false;
         CloudStoreClient.showStatus(status);
         try {
@@ -86,7 +89,7 @@ public final class ConfigScreen extends Screen {
         }
         CloudStoreClient.LOGGER.info("Testing Cloud Store endpoint {}", CloudStoreClient.config.apiBaseUrl);
         CloudStoreClient.api.connect().whenComplete((response, error) -> {
-            MinecraftClient client = MinecraftClient.getInstance();
+            Minecraft client = Minecraft.getInstance();
             client.execute(() -> {
                 if (error != null) {
                     String message = errorMessage(error);
@@ -105,15 +108,15 @@ public final class ConfigScreen extends Screen {
         status = message;
         statusColor = success ? 0x71D49A : 0xF1B36B;
         if (testButton != null) {
-            testButton.setMessage(Text.literal("保存并测试"));
+            testButton.setMessage(Component.literal("保存并测试"));
             testButton.active = true;
         }
         CloudStoreClient.showStatus(message);
     }
 
     private void saveValues() {
-        CloudStoreClient.config.apiBaseUrl = CloudStoreConfig.normalizeUrl(urlField.getText());
-        CloudStoreClient.config.loginToken = tokenField.getText().trim();
+        CloudStoreClient.config.apiBaseUrl = CloudStoreConfig.normalizeUrl(urlField.getValue());
+        CloudStoreClient.config.loginToken = tokenField.getValue().trim();
         CloudStoreClient.config.save();
         CloudStoreClient.resetApi();
     }
@@ -128,22 +131,22 @@ public final class ConfigScreen extends Screen {
     }
 
     @Override
-    public void close() {
-        if (this.client != null) {
-            this.client.setScreen(parent);
+    public void onClose() {
+        if (this.minecraft != null) {
+            this.minecraft.gui.setScreen(parent);
         }
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        context.fill(0, 0, this.width, this.height, 0xE9101116);
-        context.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, titleY, 0xFFFFFF);
-        context.drawTextWithShadow(this.textRenderer, Text.literal("服务地址（IP 或 URL）"), urlField.getX(), urlLabelY, 0xB9C3D0);
-        context.drawTextWithShadow(this.textRenderer, Text.literal("登录密码（游戏内设置的 Web 密码）"), tokenField.getX(), tokenLabelY, 0xB9C3D0);
+    public void extractRenderState(GuiGraphicsExtractor extractor, int mouseX, int mouseY, float partialTick) {
+        extractor.fill(0, 0, this.width, this.height, 0xE9101116);
+        extractor.centeredText(this.font, this.title, this.width / 2, titleY, 0xFFFFFF | 0xFF000000);
+        extractor.text(this.font, Component.literal("服务地址（IP 或 URL）"), urlField.getX(), urlLabelY, 0xB9C3D0 | 0xFF000000, true);
+        extractor.text(this.font, Component.literal("登录密码（游戏内设置的 Web 密码）"), tokenField.getX(), tokenLabelY, 0xB9C3D0 | 0xFF000000, true);
         if (!status.isEmpty()) {
-            String displayStatus = this.textRenderer.trimToWidth(status, Math.max(80, this.width - 20));
-            context.drawCenteredTextWithShadow(this.textRenderer, Text.literal(displayStatus), this.width / 2, statusY, statusColor);
+            String displayStatus = this.font.plainSubstrByWidth(status, Math.max(80, this.width - 20));
+            extractor.centeredText(this.font, Component.literal(displayStatus), this.width / 2, statusY, statusColor | 0xFF000000);
         }
-        super.render(context, mouseX, mouseY, delta);
+        super.extractRenderState(extractor, mouseX, mouseY, partialTick);
     }
 }
