@@ -2,20 +2,20 @@ package com.cloudstore.client.screen;
 
 import com.cloudstore.client.CloudStoreClient;
 import com.cloudstore.client.api.CloudStoreModels;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemGroup;
-import net.minecraft.item.ItemGroups;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.registry.Registries;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.CreativeModeTab;
+import net.minecraft.world.item.CreativeModeTabs;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -50,72 +50,72 @@ public final class CloudStoreScreen extends Screen {
     private String status = "";
     private String savedSearch = "";
     private String savedTarget = "";
-    private TextFieldWidget searchField;
-    private TextFieldWidget targetField;
-    private ButtonWidget ownerButton;
-    private ButtonWidget depositButton;
-    private ButtonWidget refreshButton;
-    private ButtonWidget submitButton;
-    private ButtonWidget clearButton;
+    private EditBox searchField;
+    private EditBox targetField;
+    private Button ownerButton;
+    private Button depositButton;
+    private Button refreshButton;
+    private Button submitButton;
+    private Button clearButton;
 
     public CloudStoreScreen(Screen parent) {
-        super(Text.literal("云仓库"));
+        super(Component.literal("云仓库"));
         this.parent = parent;
     }
 
     @Override
     protected void init() {
-        if (searchField != null) savedSearch = searchField.getText();
-        if (targetField != null) savedTarget = targetField.getText();
+        if (searchField != null) savedSearch = searchField.getValue();
+        if (targetField != null) savedTarget = targetField.getValue();
 
         int searchWidth = Math.min(180, Math.max(100, this.width / 4));
-        searchField = new TextFieldWidget(this.textRenderer, 10, 28, searchWidth, 20, Text.literal("搜索物品"));
-        searchField.setPlaceholder(Text.literal("搜索名称 / ID / 短码"));
+        searchField = new EditBox(this.font, 10, 28, searchWidth, 20, Component.literal("搜索物品"));
+        searchField.setHint(Component.literal("搜索名称 / ID / 短码"));
         searchField.setMaxLength(80);
-        searchField.setText(savedSearch);
-        searchField.setChangedListener(value -> {
+        searchField.setValue(savedSearch);
+        searchField.setResponder(value -> {
             savedSearch = value;
             scroll = 0;
         });
-        this.addDrawableChild(searchField);
+        this.addRenderableWidget(searchField);
 
         int ownerX = 16 + searchWidth;
         int rightToolbarWidth = 106;
         int ownerWidth = Math.max(70, Math.min(130, this.width - ownerX - rightToolbarWidth - 16));
-        ownerButton = ButtonWidget.builder(Text.literal("选择仓库"), button -> cycleOwner())
-            .dimensions(ownerX, 28, ownerWidth, 20).build();
-        this.addDrawableChild(ownerButton);
-        refreshButton = ButtonWidget.builder(Text.literal("刷新"), button -> reload())
-            .dimensions(this.width - 106, 28, 48, 20).build();
-        this.addDrawableChild(refreshButton);
-        depositButton = ButtonWidget.builder(Text.literal("存入"), button -> deposit())
-            .dimensions(this.width - 52, 28, 42, 20).build();
-        this.addDrawableChild(depositButton);
+        ownerButton = Button.builder(Component.literal("选择仓库"), button -> cycleOwner())
+            .bounds(ownerX, 28, ownerWidth, 20).build();
+        this.addRenderableWidget(ownerButton);
+        refreshButton = Button.builder(Component.literal("刷新"), button -> reload())
+            .bounds(this.width - 106, 28, 48, 20).build();
+        this.addRenderableWidget(refreshButton);
+        depositButton = Button.builder(Component.literal("存入"), button -> deposit())
+            .bounds(this.width - 52, 28, 42, 20).build();
+        this.addRenderableWidget(depositButton);
 
         int bottomY = this.height - 27;
         int actionWidth = this.width < 430 ? 78 : 96;
         int targetWidth = Math.min(150, Math.max(86, this.width - actionWidth - 170));
-        targetField = new TextFieldWidget(this.textRenderer, 10, bottomY, targetWidth, 20, Text.literal("领取玩家"));
-        targetField.setPlaceholder(Text.literal("留空=自己；可填代取 ID"));
+        targetField = new EditBox(this.font, 10, bottomY, targetWidth, 20, Component.literal("领取玩家"));
+        targetField.setHint(Component.literal("留空=自己；可填代取 ID"));
         targetField.setMaxLength(16);
-        targetField.setText(savedTarget);
-        targetField.setChangedListener(value -> savedTarget = value);
-        this.addDrawableChild(targetField);
+        targetField.setValue(savedTarget);
+        targetField.setResponder(value -> savedTarget = value);
+        this.addRenderableWidget(targetField);
 
         int closeX = this.width - 44;
         int settingsX = closeX - 52;
         int submitX = settingsX - actionWidth - 6;
         int clearX = submitX - 48 - 6;
-        clearButton = ButtonWidget.builder(Text.literal("清空"), button -> clearSelection())
-            .dimensions(clearX, bottomY, 48, 20).build();
-        this.addDrawableChild(clearButton);
-        submitButton = ButtonWidget.builder(Text.literal("提交取货"), button -> submitWithdraw())
-            .dimensions(submitX, bottomY, actionWidth, 20).build();
-        this.addDrawableChild(submitButton);
-        this.addDrawableChild(ButtonWidget.builder(Text.literal("设置"), button -> CloudStoreClient.openConfig(this.client, this))
-            .dimensions(settingsX, bottomY, 46, 20).build());
-        this.addDrawableChild(ButtonWidget.builder(Text.literal("关闭"), button -> close())
-            .dimensions(closeX, bottomY, 34, 20).build());
+        clearButton = Button.builder(Component.literal("清空"), button -> clearSelection())
+            .bounds(clearX, bottomY, 48, 20).build();
+        this.addRenderableWidget(clearButton);
+        submitButton = Button.builder(Component.literal("提交取货"), button -> submitWithdraw())
+            .bounds(submitX, bottomY, actionWidth, 20).build();
+        this.addRenderableWidget(submitButton);
+        this.addRenderableWidget(Button.builder(Component.literal("设置"), button -> CloudStoreClient.openConfig(this.minecraft, this))
+            .bounds(settingsX, bottomY, 46, 20).build());
+        this.addRenderableWidget(Button.builder(Component.literal("关闭"), button -> onClose())
+            .bounds(closeX, bottomY, 34, 20).build());
 
         if (!initialized) {
             initialized = true;
@@ -165,7 +165,7 @@ public final class CloudStoreScreen extends Screen {
             String resolvedOwner = resolveOwner(response, preferredOwner);
             return CloudStoreClient.api.inventory(resolvedOwner)
                 .thenApply(inventory -> new LoadResult(response, resolvedOwner, inventory));
-        }).whenComplete((result, error) -> MinecraftClient.getInstance().execute(() -> {
+        }).whenComplete((result, error) -> Minecraft.getInstance().execute(() -> {
             busy = false;
             if (error != null) {
                 status = message(error);
@@ -224,7 +224,7 @@ public final class CloudStoreScreen extends Screen {
         String requestedOwner = ownerUuid;
         CloudStoreClient.api.inventory(requestedOwner).whenComplete((response, error) -> {
             if (error == null) CloudStoreClient.cache.putInventory(endpoint(), requestedOwner, response);
-            MinecraftClient.getInstance().execute(() -> {
+            Minecraft.getInstance().execute(() -> {
                 busy = false;
                 if (error != null) status = message(error);
                 else if (requestedOwner.equals(ownerUuid)) {
@@ -292,20 +292,20 @@ public final class CloudStoreScreen extends Screen {
 
     private void rebuildCategories() {
         categories.clear();
-        categories.add(new Category(Text.literal("全部"), new ItemStack(Items.CHEST), Set.of(), true));
+        categories.add(new Category(Component.literal("全部"), new ItemStack(Items.CHEST), Set.of(), true));
         try {
-            if (this.client != null && this.client.world != null && this.client.getNetworkHandler() != null) {
-                ItemGroups.updateDisplayContext(
-                    this.client.getNetworkHandler().getEnabledFeatures(),
+            if (this.minecraft != null && this.minecraft.level != null && this.minecraft.getConnection() != null) {
+                CreativeModeTabs.tryRebuildTabContents(
+                    this.minecraft.getConnection().enabledFeatures(),
                     false,
-                    this.client.world.getRegistryManager()
+                    this.minecraft.level.registryAccess()
                 );
             }
-            for (ItemGroup group : ItemGroups.getGroupsToDisplay()) {
+            for (CreativeModeTab group : CreativeModeTabs.tabs()) {
                 try {
                     Set<Item> members = new HashSet<>();
-                    for (ItemStack stack : group.getDisplayStacks()) members.add(stack.getItem());
-                    categories.add(new Category(group.getDisplayName(), group.getIcon(), members, false));
+                    for (ItemStack stack : group.getDisplayItems()) members.add(stack.getItem());
+                    categories.add(new Category(group.getDisplayName(), group.getIconItem(), members, false));
                 } catch (RuntimeException error) {
                     CloudStoreClient.LOGGER.warn("Unable to build creative category {}: {}", group.getDisplayName().getString(), error.getMessage());
                 }
@@ -321,7 +321,7 @@ public final class CloudStoreScreen extends Screen {
         submitting = true;
         status = "正在提交存储...";
         updateButtons();
-        CloudStoreClient.api.deposit(ownerUuid).whenComplete((response, error) -> MinecraftClient.getInstance().execute(() -> {
+        CloudStoreClient.api.deposit(ownerUuid).whenComplete((response, error) -> Minecraft.getInstance().execute(() -> {
             submitting = false;
             if (error != null) status = message(error);
             else {
@@ -334,7 +334,7 @@ public final class CloudStoreScreen extends Screen {
 
     private void submitWithdraw() {
         if (submitting || selected.isEmpty() || me == null || me.user == null) return;
-        String target = targetField.getText().trim();
+        String target = targetField.getValue().trim();
         if (target.isEmpty()) target = me.user.username;
         if (!target.matches("[A-Za-z0-9_]{3,16}")) {
             status = "领取玩家 ID 必须是 3-16 位字母、数字或下划线";
@@ -351,7 +351,7 @@ public final class CloudStoreScreen extends Screen {
         submitting = true;
         status = "正在提交 " + requests.size() + " 种物品...";
         updateButtons();
-        CloudStoreClient.api.withdrawMany(ownerUuid, requests, target).whenComplete((response, error) -> MinecraftClient.getInstance().execute(() -> {
+        CloudStoreClient.api.withdrawMany(ownerUuid, requests, target).whenComplete((response, error) -> Minecraft.getInstance().execute(() -> {
             submitting = false;
             if (error != null) status = message(error);
             else {
@@ -374,20 +374,20 @@ public final class CloudStoreScreen extends Screen {
             if (me != null && me.owners != null && ownerIndex >= 0 && ownerIndex < me.owners.size()) {
                 label = me.owners.get(ownerIndex).label;
             }
-            ownerButton.setMessage(Text.literal(label));
+            ownerButton.setMessage(Component.literal(label));
             ownerButton.active = me != null && me.owners != null && me.owners.size() > 1 && !submitting;
         }
         if (refreshButton != null) refreshButton.active = !busy && !submitting;
         if (depositButton != null) depositButton.active = !ownerUuid.isBlank() && !submitting;
         if (submitButton != null) {
             submitButton.active = !selected.isEmpty() && !submitting;
-            submitButton.setMessage(Text.literal(submitting ? "提交中..." : "提交取货"));
+            submitButton.setMessage(Component.literal(submitting ? "提交中..." : "提交取货"));
         }
         if (clearButton != null) clearButton.active = !selected.isEmpty() && !submitting;
     }
 
     private List<CloudStoreModels.Item> visibleItems() {
-        String query = searchField == null ? savedSearch : searchField.getText();
+        String query = searchField == null ? savedSearch : searchField.getValue();
         String normalized = query.trim().toLowerCase();
         Category category = categories.isEmpty() ? null : categories.get(Math.min(selectedCategory, categories.size() - 1));
         return items.stream()
@@ -397,23 +397,23 @@ public final class CloudStoreScreen extends Screen {
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        context.fill(0, 0, this.width, this.height, 0xF0101116);
-        context.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, 8, 0xFFFFFF);
-        if (me != null && me.user != null) context.drawTextWithShadow(this.textRenderer, Text.literal(me.user.username), 10, 10, 0x9AA5B1);
+    public void extractRenderState(GuiGraphicsExtractor extractor, int mouseX, int mouseY, float partialTick) {
+        extractor.fill(0, 0, this.width, this.height, 0xF0101116);
+        extractor.centeredText(this.font, this.title, this.width / 2, 8, 0xFFFFFF | 0xFF000000);
+        if (me != null && me.user != null) extractor.text(this.font, Component.literal(me.user.username), 10, 10, 0x9AA5B1 | 0xFF000000, true);
 
         int tabColumns = Math.max(1, (this.width - 20) / TAB_STEP);
         int tabRows = Math.max(1, (int) Math.ceil((double) Math.max(1, categories.size()) / tabColumns));
         int tabY = 55;
-        Text tooltip = null;
+        Component tooltip = null;
         for (int i = 0; i < categories.size(); i++) {
             int x = 10 + (i % tabColumns) * TAB_STEP;
             int y = tabY + (i / tabColumns) * TAB_STEP;
             boolean active = i == selectedCategory;
             boolean hovered = mouseX >= x && mouseX < x + TAB_SIZE && mouseY >= y && mouseY < y + TAB_SIZE;
-            context.fill(x, y, x + TAB_SIZE, y + TAB_SIZE, active ? 0xFF356A52 : hovered ? 0xFF354252 : 0xFF242A33);
+            extractor.fill(x, y, x + TAB_SIZE, y + TAB_SIZE, active ? 0xFF356A52 : hovered ? 0xFF354252 : 0xFF242A33);
             ItemStack icon = categories.get(i).icon;
-            if (icon != null && !icon.isEmpty()) context.drawItem(icon, x + 4, y + 4);
+            if (icon != null && !icon.isEmpty()) extractor.item(icon, x + 4, y + 4);
             if (hovered) tooltip = categories.get(i).label;
         }
 
@@ -433,52 +433,52 @@ public final class CloudStoreScreen extends Screen {
             boolean hovered = mouseX >= x && mouseX < x + TILE_SIZE && mouseY >= y && mouseY < y + TILE_SIZE;
             long selectedAmount = selected.getOrDefault(item.itemKey, 0L);
             int background = selectedAmount > 0 ? 0xFF315C49 : hovered ? 0xFF354252 : 0xFF242A33;
-            context.fill(x, y, x + TILE_SIZE, y + TILE_SIZE, background);
+            extractor.fill(x, y, x + TILE_SIZE, y + TILE_SIZE, background);
             if (selectedAmount > 0) {
-                context.fill(x, y, x + TILE_SIZE, y + 2, 0xFF69D69A);
-                context.fill(x, y + TILE_SIZE - 2, x + TILE_SIZE, y + TILE_SIZE, 0xFF69D69A);
+                extractor.fill(x, y, x + TILE_SIZE, y + 2, 0xFF69D69A);
+                extractor.fill(x, y + TILE_SIZE - 2, x + TILE_SIZE, y + TILE_SIZE, 0xFF69D69A);
             }
             ItemStack stack = itemStack(item.itemId);
             if (!stack.isEmpty()) {
-                var matrices = context.getMatrices();
+                var matrices = extractor.pose();
                 matrices.pushMatrix();
                 matrices.translate(x + TILE_SIZE / 2.0f, y + TILE_SIZE / 2.0f);
                 matrices.scale(ITEM_SCALE, ITEM_SCALE);
                 matrices.translate(-8.0f, -8.0f);
-                context.drawItem(stack, 0, 0);
+                extractor.item(stack, 0, 0);
                 matrices.popMatrix();
             }
             String amount = compact(item.amount);
-            if (!stack.isEmpty()) context.drawStackOverlay(this.textRenderer, stack, x + 17, y + 17, amount);
+            if (!stack.isEmpty()) extractor.itemDecorations(this.font, stack, x + 17, y + 17, amount);
             if (selectedAmount > 0) {
                 String selectedText = compact(selectedAmount);
-                context.drawTextWithShadow(this.textRenderer, selectedText, x + 1, y, 0x9FFFC5);
+                extractor.text(this.font, selectedText, x + 1, y, 0x9FFFC5 | 0xFF000000, true);
             }
             if (hovered) {
-                tooltip = Text.literal(item.displayName + "  可取 " + item.amount + availabilitySuffix(item));
+                tooltip = Component.literal(item.displayName + "  可取 " + item.amount + availabilitySuffix(item));
             }
         }
 
         if (visible.isEmpty() && status.isEmpty()) {
-            context.drawCenteredTextWithShadow(this.textRenderer, Text.literal("此分类没有匹配物品"), this.width / 2, (gridY + gridBottom) / 2, 0xAAB4C0);
+            extractor.centeredText(this.font, Component.literal("此分类没有匹配物品"), this.width / 2, (gridY + gridBottom) / 2, 0xAAB4C0 | 0xFF000000);
         }
 
         int bottomY = this.height - 27;
-        context.drawTextWithShadow(this.textRenderer, Text.literal("领取玩家"), 10, bottomY - 11, 0xC5CED8);
+        extractor.text(this.font, Component.literal("领取玩家"), 10, bottomY - 11, 0xC5CED8 | 0xFF000000, true);
         long totalSelected = selected.values().stream().mapToLong(Long::longValue).sum();
         String summary = "已选 " + selected.size() + " 种 / " + totalSelected + " 件";
         int summaryX = targetField.getX() + targetField.getWidth() + 8;
         int maxSummaryWidth = Math.max(0, clearButton.getX() - summaryX - 8);
         if (maxSummaryWidth > 40) {
-            context.drawTextWithShadow(this.textRenderer, this.textRenderer.trimToWidth(summary, maxSummaryWidth), summaryX, bottomY + 6, 0xD4D9E0);
+            extractor.text(this.font, this.font.plainSubstrByWidth(summary, maxSummaryWidth), summaryX, bottomY + 6, 0xD4D9E0 | 0xFF000000, true);
         }
         if (!status.isEmpty()) {
-            String displayStatus = this.textRenderer.trimToWidth(status, Math.max(80, this.width - 20));
-            context.drawCenteredTextWithShadow(this.textRenderer, Text.literal(displayStatus), this.width / 2, gridBottom + 3, 0xF1B36B);
+            String displayStatus = this.font.plainSubstrByWidth(status, Math.max(80, this.width - 20));
+            extractor.centeredText(this.font, Component.literal(displayStatus), this.width / 2, gridBottom + 3, 0xF1B36B | 0xFF000000);
         }
 
-        super.render(context, mouseX, mouseY, delta);
-        if (tooltip != null) context.drawTooltip(this.textRenderer, tooltip, mouseX, mouseY);
+        super.extractRenderState(extractor, mouseX, mouseY, partialTick);
+        if (tooltip != null) extractor.setTooltipForNextFrame(this.font, tooltip, mouseX, mouseY);
     }
 
     private String availabilitySuffix(CloudStoreModels.Item item) {
@@ -488,10 +488,10 @@ public final class CloudStoreScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(Click click, boolean doubled) {
-        double mouseX = click.x();
-        double mouseY = click.y();
-        if (click.button() == 0) {
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        double mouseX = event.x();
+        double mouseY = event.y();
+        if (event.button() == 0) {
             int tabColumns = Math.max(1, (this.width - 20) / TAB_STEP);
             if (mouseY >= 55 && mouseY < gridY && mouseX >= 10) {
                 int column = (int) ((mouseX - 10) / TAB_STEP);
@@ -517,13 +517,13 @@ public final class CloudStoreScreen extends Screen {
                     int index = scroll * columns + row * columns + column;
                     if (localX % TILE_STEP < TILE_SIZE && localY % TILE_STEP < TILE_SIZE && index >= 0 && index < visible.size()) {
                         CloudStoreModels.Item item = visible.get(index);
-                        this.client.setScreen(new WithdrawScreen(this, item, selected.getOrDefault(item.itemKey, 0L)));
+                        this.minecraft.gui.setScreen(new WithdrawScreen(this, item, selected.getOrDefault(item.itemKey, 0L)));
                         return true;
                     }
                 }
             }
         }
-        return super.mouseClicked(click, doubled);
+        return super.mouseClicked(event, doubleClick);
     }
 
     @Override
@@ -537,14 +537,16 @@ public final class CloudStoreScreen extends Screen {
     }
 
     @Override
-    public void close() {
-        if (this.client != null) this.client.setScreen(parent);
+    public void onClose() {
+        if (this.minecraft != null) this.minecraft.gui.setScreen(parent);
     }
 
     private ItemStack itemStack(String id) {
         try {
             Identifier identifier = Identifier.tryParse(id);
-            return identifier == null ? ItemStack.EMPTY : new ItemStack(Registries.ITEM.get(identifier));
+            if (identifier == null) return ItemStack.EMPTY;
+            Item item = BuiltInRegistries.ITEM.getValue(identifier);
+            return item == null ? ItemStack.EMPTY : new ItemStack(item);
         } catch (RuntimeException ignored) {
             return ItemStack.EMPTY;
         }
@@ -574,7 +576,7 @@ public final class CloudStoreScreen extends Screen {
         return current.getMessage() == null ? "云仓库请求失败" : current.getMessage();
     }
 
-    private record Category(Text label, ItemStack icon, Set<Item> members, boolean all) {
+    private record Category(Component label, ItemStack icon, Set<Item> members, boolean all) {
     }
 
     private record LoadResult(CloudStoreModels.MeResponse me, String ownerUuid, CloudStoreModels.InventoryResponse inventory) {
